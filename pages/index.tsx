@@ -25,6 +25,7 @@ export default function Home() {
       {tab === 'Logline' && <LoglineTab projectId={projectId} setProjectId={setProjectId} />}
       {tab === 'Ingredients' && <IngredientsTab projectId={projectId} setProjectId={setProjectId} />}
       {tab === 'Characters' && <CharactersTab projectId={projectId} />}
+      {tab === 'Beats' && <BeatsTab projectId={projectId} />}
       {tab !== 'Logline' && tab !== 'Ingredients' && tab !== 'Characters' && <Placeholder title={tab} />}
     </div>
   );
@@ -246,6 +247,57 @@ function CharactersTab({ projectId }:{ projectId:string|null; }) {
       <label style={{marginTop:12}}>Characters JSON</label>
       <textarea rows={18} value={jsonText} onChange={e=>setJsonText(e.target.value)} />
       <p style={{color:'#aaa', marginTop:8}}>Format: {"{ \"characters\": [ { name, role, want, need, ... } ] }"}</p>
+    </div>
+  );
+}
+
+function BeatsTab({ projectId }:{ projectId:string|null; }) {
+  const [jsonText, setJsonText] = useState<string>('');
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const generate = async () => {
+    setBusy(true); setStatus(null);
+    // You can pass theme/world later; V1 uses canonical premise
+    const res = await fetch('/api/refine-beats', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ logline: 'Use project premise' })
+    });
+    const data = await res.json();
+    setJsonText(JSON.stringify(data, null, 2));
+    setBusy(false);
+  };
+
+  const save = async () => {
+    try {
+      const parsed = JSON.parse(jsonText);
+      const beats = parsed.beats || [];
+      if (!projectId) { setStatus('No projectId. Save earlier stages first.'); return; }
+      setBusy(true); setStatus(null);
+      const r = await fetch('/api/save-beats', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ projectId, beats })
+      });
+      const d = await r.json();
+      setStatus(d?.ok ? `Saved ✔ ${d.count} beats` : `Save failed: ${d?.error||'unknown'}`);
+    } catch {
+      setStatus('Invalid JSON. Click Generate, then edit lightly.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2>Stage 4 — 40-Beat Spine</h2>
+      <div style={{display:'flex', gap:8}}>
+        <button className="button" onClick={generate} disabled={busy}>{busy?'Thinking…':'Generate 40 Beats'}</button>
+        <button className="button" onClick={save} disabled={busy}>{busy?'Saving…':'Save Beats'}</button>
+      </div>
+      {status && <p style={{color:'#8b8', marginTop:8}}>{status}</p>}
+      <label style={{marginTop:12}}>Beats JSON</label>
+      <textarea rows={18} value={jsonText} onChange={e=>setJsonText(e.target.value)} />
+      <p style={{color:'#aaa', marginTop:8}}>Format: {"{ \"beats\": [ { num, label, summary, purpose, stakes } ] }"}</p>
     </div>
   );
 }
