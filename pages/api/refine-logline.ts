@@ -25,7 +25,7 @@ Also include 3 short viability notes that address clarity, hook, and market posi
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',        // or gpt-4o-mini
+        model: 'gpt-4o',        // or 'gpt-4o-mini'
         temperature: 0.3,
         messages: [
           { role: 'system', content: system },
