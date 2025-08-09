@@ -6,7 +6,6 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>('Logline');
   const [projectId, setProjectId] = useState<string | null>(null);
 
-  // Pull a saved projectId from localStorage on first load
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const pid = window.localStorage.getItem('projectId');
@@ -19,23 +18,13 @@ export default function Home() {
 
       <div className="tabbar">
         {(['Logline','Ingredients','Characters','Beats','Scenes','Polish','Export'] as Tab[]).map(t => (
-          <button
-            key={t}
-            className={'tab ' + (tab === t ? 'active' : '')}
-            onClick={() => setTab(t)}
-          >
-            {t}
-          </button>
+          <button key={t} className={'tab ' + (tab===t ? 'active' : '')} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
 
       {tab === 'Logline' && <LoglineTab projectId={projectId} setProjectId={setProjectId} />}
-      {tab === 'Ingredients' && <Placeholder title="Ingredients" />}
-      {tab === 'Characters' && <Placeholder title="Characters" />}
-      {tab === 'Beats' && <Placeholder title="Beats" />}
-      {tab === 'Scenes' && <Placeholder title="Scenes" />}
-      {tab === 'Polish' && <Placeholder title="Polish" />}
-      {tab === 'Export' && <Placeholder title="Export" />}
+      {tab === 'Ingredients' && <IngredientsTab projectId={projectId} setProjectId={setProjectId} />}
+      {tab !== 'Logline' && tab !== 'Ingredients' && <Placeholder title={tab} />}
     </div>
   );
 }
@@ -44,31 +33,22 @@ function Placeholder({ title }: { title: string }) {
   return (
     <div className="card">
       <h2>{title}</h2>
-      <p>This tab will be wired next. For now, focus on the Logline tab to verify the pipeline.</p>
+      <p>We’ll wire this after Ingredients.</p>
     </div>
   );
 }
 
-function LoglineTab({
-  projectId,
-  setProjectId
-}: {
-  projectId: string | null;
-  setProjectId: (v: string | null) => void;
-}) {
-  // Pre-filled test idea (The Terminal-style)
+function LoglineTab({ projectId, setProjectId }:{ projectId:string|null; setProjectId:(v:string|null)=>void; }) {
   const [idea, setIdea] = useState(
     'A stateless traveler is trapped in a U.S. airport when a coup invalidates his passport; unable to enter the country or fly home, he must outmaneuver bureaucracy and build a fragile new community while fighting for a way forward.'
   );
   const [genre, setGenre] = useState('Comedy-Drama');
   const [tone, setTone] = useState('Heartwarming, bittersweet, hopeful');
-
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');     // AI output
+  const [result, setResult] = useState('');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
-  // If we already have a projectId, fetch it and prefill fields
   useEffect(() => {
     const run = async () => {
       if (!projectId) return;
@@ -79,118 +59,161 @@ function LoglineTab({
           if (d.project.logline) setIdea(d.project.logline);
           if (d.project.genre) setGenre(d.project.genre);
           if (d.project.tone) setTone(d.project.tone);
-          setStatus(`Loaded project ${projectId.slice(0, 8)}…`);
+          setStatus(`Loaded project ${projectId.slice(0,8)}…`);
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
     run();
   }, [projectId]);
 
   const onRefine = async () => {
-    setLoading(true);
-    setResult('');
-    setStatus(null);
-    try {
-      const res = await fetch('/api/refine-logline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idea, genre, tone })
-      });
-      const data = await res.json();
-      setResult(data.result || JSON.stringify(data, null, 2));
-    } catch (e: any) {
-      setResult('Error: ' + e?.message);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setResult(''); setStatus(null);
+    const res = await fetch('/api/refine-logline', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ idea, genre, tone })
+    });
+    const data = await res.json();
+    setResult(data.result || JSON.stringify(data, null, 2));
+    setLoading(false);
   };
 
   const saveToDb = async (textToSave: string) => {
-    setSaving(true);
-    setStatus(null);
-    try {
-      const payload: any = {
-        title: 'Test Project — Terminal',
-        logline: textToSave,
-        genre,
-        tone
-      };
-      if (projectId) payload.projectId = projectId;
-
-      const res = await fetch('/api/save-logline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-
-      if (data?.project?.id) {
-        setProjectId(data.project.id);
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('projectId', data.project.id);
-        }
-        setStatus(`Saved ✔ Project ${data.project.id.slice(0, 8)}…`);
-      } else if (data?.error) {
-        setStatus('Save failed: ' + data.error);
-      } else {
-        setStatus('Saved (no id returned)');
-      }
-    } catch (e: any) {
-      setStatus('Save failed: ' + (e?.message || String(e)));
-    } finally {
-      setSaving(false);
-    }
+    setSaving(true); setStatus(null);
+    const payload:any = { title:'Untitled', logline:textToSave, genre, tone };
+    if (projectId) payload.projectId = projectId;
+    const r = await fetch('/api/save-logline', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (d?.project?.id) {
+      setProjectId(d.project.id);
+      if (typeof window !== 'undefined') window.localStorage.setItem('projectId', d.project.id);
+      setStatus(`Saved ✔ Project ${d.project.id.slice(0,8)}…`);
+    } else setStatus('Save failed');
+    setSaving(false);
   };
 
   return (
     <div className="card">
       <h2>Stage 1 — Logline & Core Concept</h2>
-
       <div className="row">
-        <div style={{ flex: 1 }}>
+        <div style={{flex:1}}>
           <label>Idea</label>
-          <textarea rows={4} value={idea} onChange={e => setIdea(e.target.value)} />
+          <textarea rows={4} value={idea} onChange={e=>setIdea(e.target.value)} />
         </div>
       </div>
-
       <div className="row">
-        <div style={{ flex: 1 }}>
+        <div style={{flex:1}}>
           <label>Genre</label>
-          <input className="input" value={genre} onChange={e => setGenre(e.target.value)} />
+          <input className="input" value={genre} onChange={e=>setGenre(e.target.value)} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{flex:1}}>
           <label>Tone</label>
-          <input className="input" value={tone} onChange={e => setTone(e.target.value)} />
+          <input className="input" value={tone} onChange={e=>setTone(e.target.value)} />
         </div>
       </div>
+      <div style={{marginTop:12, display:'flex', gap:8}}>
+        <button className="button" onClick={onRefine} disabled={loading}>{loading?'Refining…':'Refine Logline'}</button>
+        <button className="button" onClick={()=>saveToDb(result || idea)} disabled={saving || !(result || idea)}>{saving?'Saving…':'Save to Project'}</button>
+      </div>
+      {status && <p style={{color:'#8b8', marginTop:8}}>{status}</p>}
+      {result && (<div style={{marginTop:16}}><label>AI Output</label><pre className="card">{result}</pre></div>)}
+    </div>
+  );
+}
 
-      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <button className="button" onClick={onRefine} disabled={loading}>
-          {loading ? 'Refining…' : 'Refine Logline'}
-        </button>
-        <button
-          className="button"
-          onClick={() => saveToDb(result || idea)}
-          disabled={saving || !(result || idea)}
-        >
-          {saving ? 'Saving…' : 'Save to Project'}
-        </button>
+function IngredientsTab({ projectId, setProjectId }:{ projectId:string|null; setProjectId:(v:string|null)=>void; }) {
+  const [theme, setTheme] = useState('');
+  const [world, setWorld] = useState('');
+  const [motifsText, setMotifsText] = useState(''); // comma-separated "watch:runs out of time, rain:cleansing"
+  const [aiOut, setAiOut] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  // If project exists, try to prefill from DB
+  useEffect(() => {
+    const run = async () => {
+      if (!projectId) return;
+      try {
+        const r = await fetch(`/api/get-project?id=${projectId}`);
+        const d = await r.json();
+        if (d?.project) {
+          if (d.project.theme) setTheme(d.project.theme);
+          if (d.project.refs?.world_brief) setWorld(d.project.refs.world_brief);
+          setStatus(`Loaded project ${projectId.slice(0,8)}…`);
+        }
+      } catch {}
+    };
+    run();
+  }, [projectId]);
+
+  const refine = async () => {
+    setLoading(true); setStatus(null);
+    // use the saved/edited logline if we have it; else a fallback
+    const loglineSource = theme || 'Use the canonical premise from Stage 1';
+    const res = await fetch('/api/refine-ingredients', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ logline: loglineSource, genre:'', tone:'' })
+    });
+    const data = await res.json();
+    setAiOut(data);
+    // prefill UI
+    if (data?.theme_equation) setTheme(data.theme_equation);
+    if (data?.world_brief) setWorld(data.world_brief);
+    if (Array.isArray(data?.motifs)) {
+      const line = data.motifs.map((m:any)=> `${m.name}:${m.meaning||''}`).join(', ');
+      setMotifsText(line);
+    }
+    setLoading(false);
+  };
+
+  const save = async () => {
+    setSaving(true); setStatus(null);
+    // parse motifsText "watch:time, rain:cleansing"
+    const motifs = motifsText.split(',').map(s => {
+      const [name, ...rest] = s.trim().split(':');
+      const meaning = rest.join(':').trim();
+      return name ? { name, meaning: meaning || null } : null;
+    }).filter(Boolean);
+
+    const res = await fetch('/api/save-ingredients', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ projectId, theme_equation: theme, world_brief: world, motifs })
+    });
+    const data = await res.json();
+    if (data?.projectId) {
+      setProjectId(data.projectId);
+      if (typeof window !== 'undefined') window.localStorage.setItem('projectId', data.projectId);
+      setStatus(`Saved ✔ Project ${data.projectId.slice(0,8)}…`);
+    } else setStatus('Save failed');
+    setSaving(false);
+  };
+
+  return (
+    <div className="card">
+      <h2>Stage 2 — Core Ingredients</h2>
+
+      <label>Theme Equation (Truby):</label>
+      <textarea rows={3} value={theme} onChange={e=>setTheme(e.target.value)} />
+
+      <label style={{marginTop:12}}>World / Tone Brief (1 paragraph):</label>
+      <textarea rows={4} value={world} onChange={e=>setWorld(e.target.value)} />
+
+      <label style={{marginTop:12}}>Motifs (comma-separated: name:meaning)</label>
+      <input className="input" value={motifsText} onChange={e=>setMotifsText(e.target.value)} placeholder="watch: time running out, rain: cleansing" />
+
+      <div style={{marginTop:12, display:'flex', gap:8}}>
+        <button className="button" onClick={refine} disabled={loading}>{loading?'Thinking…':'Refine Ingredients'}</button>
+        <button className="button" onClick={save} disabled={saving || !theme}>{saving?'Saving…':'Save Ingredients'}</button>
       </div>
 
       {status && <p style={{ color: '#8b8', marginTop: 8 }}>{status}</p>}
 
-      {result && (
-        <div style={{ marginTop: 16 }}>
-          <label>AI Output</label>
-          <pre className="card">{result}</pre>
+      {aiOut && (
+        <div style={{marginTop:16}}>
+          <label>AI Suggestions (JSON)</label>
+          <pre className="card">{JSON.stringify(aiOut, null, 2)}</pre>
         </div>
       )}
-
-      <p style={{ color: '#aaa', marginTop: 8 }}>
-        Tip: AI uses your server key; saving uses the Supabase Service Role on the server. Your browser never sees those secrets.
-      </p>
     </div>
   );
 }
