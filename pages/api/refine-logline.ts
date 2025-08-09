@@ -8,31 +8,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
 
-    const system = 'You are a development exec. Rewrite loglines to maximize irony, specificity, and market hook. Include 3 bullet viability notes.';
-    const user = `Idea: ${idea}\nGenre: ${genre}\nTone: ${tone}\nReturn: 5 loglines + viability notes.`;
+  const system =
+  "You are a development exec. Rewrite loglines with maximum clarity and specificity, BUT DO NOT CHANGE THE PREMISE, CHARACTERS, OR SETTING. Preserve the core situation and constraints exactly.";
+const user =
+  `IDEA (CANONICAL): ${idea}
+Genre: ${genre}
+Tone: ${tone}
+TASK: Produce 5 variations of the SAME premise, not new concepts. Keep: airport confinement, stateless status, bureaucratic conflict, warm/bittersweet tone. No new professions or plot engines. Each 25–40 words.
+Also include 3 short viability notes that address clarity, hook, and market positioning.`;
 
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o', // replace with exact model name you have access to
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user }
-        ]
-      })
-    });
-
-    const data = await openaiRes.json();
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message || 'OpenAI error' });
-    }
-    const content = data?.choices?.[0]?.message?.content || '';
-    return res.status(200).json({ result: content });
-  } catch (e:any) {
-    return res.status(500).json({ error: String(e?.message || e) });
-  }
-}
+const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+  body: JSON.stringify({
+    model: 'gpt-4o',           // keep your working model
+    temperature: 0.3,          // ↓ less creative drift
+    messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
+  })
+});
