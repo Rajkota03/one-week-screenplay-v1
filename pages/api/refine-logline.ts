@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-5.0', // replace with exact model name you have access to
+        model: 'gpt-4o', // replace with exact model name you have access to
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user }
