@@ -33,7 +33,7 @@ Also include 3 short viability notes that address clarity, hook, and market posi
         ],
       }),
     });
-
+   
     const data = await openaiRes.json();
     if ((data as any)?.error) {
       return res.status(500).json({ error: (data as any).error?.message || 'OpenAI error' });
