@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import CharactersTab from '@/components/CharactersTab';
+import BeatsTab from '@/components/BeatsTab';
 
 type Tab = 'Logline' | 'Ingredients' | 'Characters' | 'Beats' | 'Scenes' | 'Polish' | 'Export';
 
