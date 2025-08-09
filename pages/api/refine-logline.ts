@@ -25,4 +25,3 @@ const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     temperature: 0.3,          // ↓ less creative drift
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
   })
-});
