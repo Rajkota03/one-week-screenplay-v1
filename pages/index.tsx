@@ -28,7 +28,7 @@ export default function Home() {
       {tab === 'Ingredients' && <IngredientsTab projectId={projectId} setProjectId={setProjectId} />}
       {tab === 'Characters' && <CharactersTab projectId={projectId} />}
       {tab === 'Beats' && <BeatsTab projectId={projectId} />}
-      {tab !== 'Logline' && tab !== 'Ingredients' && tab !== 'Characters' && <Placeholder title={tab} />}
+      {tab !== 'Logline' && tab !== 'Ingredients' && tab !== 'Characters' && tab !== 'Beats' && <Placeholder title={tab} />}
     </div>
   );
 }
@@ -37,12 +37,12 @@ function Placeholder({ title }: { title: string }) {
   return (
     <div className="card">
       <h2>{title}</h2>
-      <p>We’ll wire this after Characters.</p>
+      <p>We’ll wire this next.</p>
     </div>
   );
 }
 
-/* ---------- Logline (unchanged from your working version) ---------- */
+/* ---------- Logline (inline) ---------- */
 function LoglineTab({ projectId, setProjectId }:{ projectId:string|null; setProjectId:(v:string|null)=>void; }) {
   const [idea, setIdea] = useState(
     'A stateless traveler is trapped in a U.S. airport when a coup invalidates his passport; unable to enter the country or fly home, he must outmaneuver bureaucracy and build a fragile new community while fighting for a way forward.'
@@ -125,7 +125,7 @@ function LoglineTab({ projectId, setProjectId }:{ projectId:string|null; setProj
   );
 }
 
-/* ---------- Ingredients (your working V1) ---------- */
+/* ---------- Ingredients (inline) ---------- */
 function IngredientsTab({ projectId, setProjectId }:{ projectId:string|null; setProjectId:(v:string|null)=>void; }) {
   const [theme, setTheme] = useState('');
   const [world, setWorld] = useState('');
@@ -196,110 +196,6 @@ function IngredientsTab({ projectId, setProjectId }:{ projectId:string|null; set
         <button className="button" onClick={save} disabled={saving || !theme}>{saving?'Saving…':'Save Ingredients'}</button>
       </div>
       {aiOut && (<div style={{marginTop:16}}><label>AI Suggestions (JSON)</label><pre className="card">{JSON.stringify(aiOut, null, 2)}</pre></div>)}
-    </div>
-  );
-}
-
-/* ---------- Characters (new) ---------- */
-function CharactersTab({ projectId }:{ projectId:string|null; }) {
-  const [jsonText, setJsonText] = useState<string>('');
-  const [status, setStatus] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const generate = async () => {
-    setBusy(true); setStatus(null);
-    // Minimal inputs; API builds from Stage 1/2 context
-    const res = await fetch('/api/refine-characters', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ logline: 'Use Stage 1 canonical premise' })
-    });
-    const data = await res.json();
-    setJsonText(JSON.stringify(data, null, 2));
-    setBusy(false);
-  };
-
-  const save = async () => {
-    try {
-      const parsed = JSON.parse(jsonText);
-      const characters = parsed.characters || [];
-      if (!projectId) { setStatus('No projectId. Save Logline/Ingredients first.'); return; }
-      setBusy(true); setStatus(null);
-      const r = await fetch('/api/save-characters', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ projectId, characters })
-      });
-      const d = await r.json();
-      setStatus(d?.ok ? `Saved ✔ ${d.count} characters` : `Save failed: ${d?.error||'unknown'}`);
-    } catch (e:any) {
-      setStatus('Invalid JSON. Click Generate, then edit lightly.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="card">
-      <h2>Stage 3 — Characters</h2>
-      <p>Click Generate for a starter cast, tweak JSON, then Save.</p>
-      <div style={{display:'flex', gap:8, marginTop:8}}>
-        <button className="button" onClick={generate} disabled={busy}>{busy?'Thinking…':'Generate Starter Cast'}</button>
-        <button className="button" onClick={save} disabled={busy}>{busy?'Saving…':'Save Characters'}</button>
-      </div>
-      {status && <p style={{color:'#8b8', marginTop:8}}>{status}</p>}
-      <label style={{marginTop:12}}>Characters JSON</label>
-      <textarea rows={18} value={jsonText} onChange={e=>setJsonText(e.target.value)} />
-      <p style={{color:'#aaa', marginTop:8}}>Format: {"{ \"characters\": [ { name, role, want, need, ... } ] }"}</p>
-    </div>
-  );
-}
-
-function BeatsTab({ projectId }:{ projectId:string|null; }) {
-  const [jsonText, setJsonText] = useState<string>('');
-  const [status, setStatus] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const generate = async () => {
-    setBusy(true); setStatus(null);
-    // You can pass theme/world later; V1 uses canonical premise
-    const res = await fetch('/api/refine-beats', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ logline: 'Use project premise' })
-    });
-    const data = await res.json();
-    setJsonText(JSON.stringify(data, null, 2));
-    setBusy(false);
-  };
-
-  const save = async () => {
-    try {
-      const parsed = JSON.parse(jsonText);
-      const beats = parsed.beats || [];
-      if (!projectId) { setStatus('No projectId. Save earlier stages first.'); return; }
-      setBusy(true); setStatus(null);
-      const r = await fetch('/api/save-beats', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ projectId, beats })
-      });
-      const d = await r.json();
-      setStatus(d?.ok ? `Saved ✔ ${d.count} beats` : `Save failed: ${d?.error||'unknown'}`);
-    } catch {
-      setStatus('Invalid JSON. Click Generate, then edit lightly.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="card">
-      <h2>Stage 4 — 40-Beat Spine</h2>
-      <div style={{display:'flex', gap:8}}>
-        <button className="button" onClick={generate} disabled={busy}>{busy?'Thinking…':'Generate 40 Beats'}</button>
-        <button className="button" onClick={save} disabled={busy}>{busy?'Saving…':'Save Beats'}</button>
-      </div>
-      {status && <p style={{color:'#8b8', marginTop:8}}>{status}</p>}
-      <label style={{marginTop:12}}>Beats JSON</label>
-      <textarea rows={18} value={jsonText} onChange={e=>setJsonText(e.target.value)} />
-      <p style={{color:'#aaa', marginTop:8}}>Format: {"{ \"beats\": [ { num, label, summary, purpose, stakes } ] }"}</p>
     </div>
   );
 }
