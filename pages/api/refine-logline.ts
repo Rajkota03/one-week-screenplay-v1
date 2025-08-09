@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -32,16 +31,14 @@ Also include 3 short viability notes that address clarity, hook, and market posi
           { role: 'user', content: user },
         ],
       }),
-    });
-   
+    }); 
     const data = await openaiRes.json();
     if ((data as any)?.error) {
       return res.status(500).json({ error: (data as any).error?.message || 'OpenAI error' });
     }
-
     const content = (data as any)?.choices?.[0]?.message?.content || '';
     return res.status(200).json({ result: content });
   } catch (e: any) {
     return res.status(500).json({ error: e?.message || String(e) });
   }
-}
+  }
