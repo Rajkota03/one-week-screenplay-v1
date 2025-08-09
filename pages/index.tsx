@@ -8,16 +8,24 @@ export default function Home() {
 
   // Pull a saved projectId from localStorage on first load
   useEffect(() => {
-    const pid = typeof window !== 'undefined' ? window.localStorage.getItem('projectId') : null;
+    if (typeof window === 'undefined') return;
+    const pid = window.localStorage.getItem('projectId');
     if (pid) setProjectId(pid);
   }, []);
 
   return (
     <div className="container">
       <h1>🎬 One-Week Screenplay Machine — V1</h1>
+
       <div className="tabbar">
         {(['Logline','Ingredients','Characters','Beats','Scenes','Polish','Export'] as Tab[]).map(t => (
-          <button key={t} className={'tab ' + (tab===t ? 'active' : '')} onClick={() => setTab(t)}>{t}</button>
+          <button
+            key={t}
+            className={'tab ' + (tab === t ? 'active' : '')}
+            onClick={() => setTab(t)}
+          >
+            {t}
+          </button>
         ))}
       </div>
 
@@ -48,21 +56,21 @@ function LoglineTab({
   projectId: string | null;
   setProjectId: (v: string | null) => void;
 }) {
-  // Pre-filled with The Terminal style test
+  // Pre-filled test idea (The Terminal-style)
   const [idea, setIdea] = useState(
-    "A stateless traveler is trapped in a U.S. airport when a coup invalidates his passport; unable to enter the country or fly home, he must outmaneuver bureaucracy and build a fragile new community while fighting for a way forward."
+    'A stateless traveler is trapped in a U.S. airport when a coup invalidates his passport; unable to enter the country or fly home, he must outmaneuver bureaucracy and build a fragile new community while fighting for a way forward.'
   );
   const [genre, setGenre] = useState('Comedy-Drama');
   const [tone, setTone] = useState('Heartwarming, bittersweet, hopeful');
 
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');
+  const [result, setResult] = useState('');     // AI output
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
-  // If you already have a projectId, you can optionally fetch and prefill
+  // If we already have a projectId, fetch it and prefill fields
   useEffect(() => {
-    const fetchExisting = async () => {
+    const run = async () => {
       if (!projectId) return;
       try {
         const r = await fetch(`/api/get-project?id=${projectId}`);
@@ -71,11 +79,13 @@ function LoglineTab({
           if (d.project.logline) setIdea(d.project.logline);
           if (d.project.genre) setGenre(d.project.genre);
           if (d.project.tone) setTone(d.project.tone);
-          setStatus(`Loaded project ${projectId.slice(0,8)}…`);
+          setStatus(`Loaded project ${projectId.slice(0, 8)}…`);
         }
-      } catch { /* ignore */ }
+      } catch {
+        // ignore
+      }
     };
-    fetchExisting();
+    run();
   }, [projectId]);
 
   const onRefine = async () => {
@@ -90,7 +100,7 @@ function LoglineTab({
       });
       const data = await res.json();
       setResult(data.result || JSON.stringify(data, null, 2));
-    } catch (e:any) {
+    } catch (e: any) {
       setResult('Error: ' + e?.message);
     } finally {
       setLoading(false);
@@ -115,18 +125,19 @@ function LoglineTab({
         body: JSON.stringify(payload)
       });
       const data = await res.json();
+
       if (data?.project?.id) {
         setProjectId(data.project.id);
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('projectId', data.project.id);
         }
-        setStatus(`Saved ✔ Project ${data.project.id.slice(0,8)}…`);
+        setStatus(`Saved ✔ Project ${data.project.id.slice(0, 8)}…`);
       } else if (data?.error) {
         setStatus('Save failed: ' + data.error);
       } else {
         setStatus('Saved (no id returned)');
       }
-    } catch (e:any) {
+    } catch (e: any) {
       setStatus('Save failed: ' + (e?.message || String(e)));
     } finally {
       setSaving(false);
@@ -138,43 +149,47 @@ function LoglineTab({
       <h2>Stage 1 — Logline & Core Concept</h2>
 
       <div className="row">
-        <div style={{flex:1}}>
+        <div style={{ flex: 1 }}>
           <label>Idea</label>
-          <textarea rows={4} value={idea} onChange={e=>setIdea(e.target.value)} />
+          <textarea rows={4} value={idea} onChange={e => setIdea(e.target.value)} />
         </div>
       </div>
 
       <div className="row">
-        <div style={{flex:1}}>
+        <div style={{ flex: 1 }}>
           <label>Genre</label>
-          <input className="input" value={genre} onChange={e=>setGenre(e.target.value)} />
+          <input className="input" value={genre} onChange={e => setGenre(e.target.value)} />
         </div>
-        <div style={{flex:1}}>
+        <div style={{ flex: 1 }}>
           <label>Tone</label>
-          <input className="input" value={tone} onChange={e=>setTone(e.target.value)} />
+          <input className="input" value={tone} onChange={e => setTone(e.target.value)} />
         </div>
       </div>
 
-      <div style={{marginTop:12, display:'flex', gap:8}}>
+      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
         <button className="button" onClick={onRefine} disabled={loading}>
           {loading ? 'Refining…' : 'Refine Logline'}
         </button>
-        <button className="button" onClick={() => saveToDb(result || idea)} disabled={saving || !(result || idea)}>
+        <button
+          className="button"
+          onClick={() => saveToDb(result || idea)}
+          disabled={saving || !(result || idea)}
+        >
           {saving ? 'Saving…' : 'Save to Project'}
         </button>
       </div>
 
-      {status && <p style={{color:'#8b8', marginTop:8}}>{status}</p>}
+      {status && <p style={{ color: '#8b8', marginTop: 8 }}>{status}</p>}
 
       {result && (
-        <div style={{marginTop:16}}>
+        <div style={{ marginTop: 16 }}>
           <label>AI Output</label>
           <pre className="card">{result}</pre>
         </div>
       )}
 
-      <p style={{color:'#aaa', marginTop:8}}>
-        Tip: the API uses your server-side OPENAI_API_KEY; Supabase writes use the server-side Service Role (kept secret).
+      <p style={{ color: '#aaa', marginTop: 8 }}>
+        Tip: AI uses your server key; saving uses the Supabase Service Role on the server. Your browser never sees those secrets.
       </p>
     </div>
   );
