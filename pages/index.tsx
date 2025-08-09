@@ -6,7 +6,7 @@ import BeatsTab from '../components/BeatsTab';
 type Tab = 'Logline' | 'Ingredients' | 'Characters' | 'Beats' | 'Scenes' | 'Polish' | 'Export';
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>('Logline');
+  const [tab, setTab] = useState<StageTab>('Logline');
   const [projectId, setProjectId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,8 +19,8 @@ export default function Home() {
     <div className="container">
       <h1>🎬 One-Week Screenplay Machine — V1</h1>
 
-      <div className="tabbar">
-        {(['Logline','Ingredients','Characters','Beats','Scenes','Polish','Export'] as Tab[]).map(t => (
+       <div className="tabbar">
+    {(['Logline','Ingredients','Characters','Beats','Scenes','Polish','Export'] as StageTab[]).map(t => (
           <button key={t} className={'tab ' + (tab===t ? 'active' : '')} onClick={() => setTab(t)}>{t}</button>
         ))}
       </div>
